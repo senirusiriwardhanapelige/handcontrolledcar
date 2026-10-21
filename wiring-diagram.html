@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hand-Controlled Car — Wiring Diagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 30px; }
+  h1 { text-align: center; margin-bottom: 30px; color: #1a1a1a; font-size: 24px; }
+
+  .diagram { display: flex; gap: 40px; justify-content: center; align-items: flex-start; }
+
+  .section { border: 2px solid #333; border-radius: 10px; padding: 20px; background: #ffffff; display: flex; flex-direction: column; gap: 16px; min-width: 420px; }
+  .section h2 { font-size: 18px; color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 4px; }
+
+  .component { border: 2px solid #555; border-radius: 6px; padding: 12px; background: #fafafa; display: flex; flex-direction: column; gap: 6px; }
+  .component h3 { font-size: 14px; margin: 0; color: #1a1a1a; }
+  .component .sub { font-size: 12px; color: #666; margin: 0; }
+  .pin { font-size: 11px; color: #333; display: flex; justify-content: space-between; }
+
+  .esp { border-color: #01579b; background: #e3f2fd; }
+  .esp h3 { color: #01579b; }
+  .adxl { border-color: #f57f17; background: #fffde7; }
+  .adxl h3 { color: #f57f17; }
+  .battery-tx { border-color: #2e7d32; background: #e8f5e9; }
+  .battery-tx h3 { color: #2e7d32; }
+  .battery-rx { border-color: #b71c1c; background: #ffebee; }
+  .battery-rx h3 { color: #b71c1c; }
+  .l298n { border-color: #e65100; background: #fff3e0; }
+  .l298n h3 { color: #e65100; }
+  .motor { border-color: #546e7a; background: #eceff1; }
+  .motor h3 { color: #546e7a; }
+  .regulator { border-color: #7b1fa2; background: #f3e5f5; }
+  .regulator h3 { color: #7b1fa2; }
+
+  .wire { color: #1a1a1a; font-size: 12px; font-family: monospace; white-space: nowrap; }
+  .wire-red { color: #b71c1c; font-weight: bold; }
+  .wire-orange { color: #e65100; font-weight: bold; }
+  .wire-gnd { color: #777; font-style: italic; }
+
+  .espnow { text-align: center; color: #0d47a1; font-size: 13px; font-weight: bold; margin: 20px 0; }
+
+  .legend { border: 1px solid #999; border-radius: 6px; padding: 12px; background: #fff; margin-top: 30px; max-width: 900px; margin-left: auto; margin-right: auto; }
+  .legend h3 { font-size: 14px; margin-bottom: 8px; color: #1a1a1a; }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+  .legend-line { width: 24px; height: 2px; }
+</style>
+</head>
+<body>
+
+<h1>Hand-Controlled Car — Wiring Diagram</h1>
+
+<div class="diagram">
+  <!-- TRANSMITTER -->
+  <div class="section">
+    <h2>TRANSMITTER (Hand)</h2>
+
+    <div class="component esp">
+      <h3>ESP Board</h3>
+      <p class="sub">NodeMCU-style</p>
+      <div class="pin"><span>GPIO 14</span><span>→ SDA</span></div>
+      <div class="pin"><span>GPIO 12</span><span>→ SCL</span></div>
+      <div class="pin"><span>3V3</span><span>→ VCC + CS</span></div>
+      <div class="pin"><span>GND</span><span>→ GND + SDO</span></div>
+    </div>
+
+    <div class="component adxl">
+      <h3>ADXL345</h3>
+      <p class="sub">accelerometer</p>
+      <div class="pin"><span>SDA</span><span>← GPIO 14</span></div>
+      <div class="pin"><span>SCL</span><span>← GPIO 12</span></div>
+      <div class="pin"><span>VCC + CS</span><span>→ 3V3</span></div>
+      <div class="pin"><span>GND + SDO</span><span>→ GND</span></div>
+    </div>
+
+    <div class="component battery-tx">
+      <h3>Battery Pack</h3>
+      <p class="sub">3.7V LiPo or 2×AA</p>
+    </div>
+  </div>
+
+  <!-- RECEIVER -->
+  <div class="section">
+    <h2>RECEIVER (Car)</h2>
+
+    <div class="component esp">
+      <h3>ESP Board</h3>
+      <p class="sub">NodeMCU-style</p>
+      <div class="pin"><span>GPIO 5</span><span>→ IN1</span></div>
+      <div class="pin"><span>GPIO 4</span><span>→ IN2</span></div>
+      <div class="pin"><span>GPIO 14</span><span>→ IN3</span></div>
+      <div class="pin"><span>GPIO 12</span><span>→ IN4</span></div>
+      <div class="pin"><span>GPIO 13</span><span>→ ENA</span></div>
+      <div class="pin"><span>GPIO 16</span><span>→ ENB</span></div>
+    </div>
+
+    <div class="component l298n">
+      <h3>L298N</h3>
+      <p class="sub">motor driver</p>
+      <div class="pin"><span>IN1</span><span>← GPIO 5</span></div>
+      <div class="pin"><span>IN2</span><span>← GPIO 4</span></div>
+      <div class="pin"><span>IN3</span><span>← GPIO 14</span></div>
+      <div class="pin"><span>IN4</span><span>← GPIO 12</span></div>
+      <div class="pin"><span>ENA</span><span>← GPIO 13</span></div>
+      <div class="pin"><span>ENB</span><span>← GPIO 16</span></div>
+    </div>
+
+    <div class="component motor">
+      <h3>Left Motor</h3>
+    </div>
+
+    <div class="component motor">
+      <h3>Right Motor</h3>
+    </div>
+
+    <div class="component battery-rx">
+      <h3>7.4V Battery Pack</h3>
+    </div>
+
+    <div class="component regulator">
+      <h3>5V Regulator</h3>
+    </div>
+  </div>
+</div>
+
+<div class="espnow">ESP-NOW (2.4 GHz, peer-to-peer) — no router, no app</div>
+
+<div class="legend">
+  <h3>Legend</h3>
+  <div class="legend-item"><div class="legend-line" style="background:#333;"></div> Data / control wire</div>
+  <div class="legend-item"><div class="legend-line" style="background:#b71c1c;"></div> Motor power (red)</div>
+  <div class="legend-item"><div class="legend-line" style="background:#e65100;"></div> Regulator 5V output</div>
+  <div class="legend-item"><div class="legend-line" style="background:#999;"></div> Common ground (all tied together)</div>
+</div>
+
+</body>
+</html>
