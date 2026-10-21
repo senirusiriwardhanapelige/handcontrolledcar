@@ -6,7 +6,7 @@
 #include <Adafruit_Sensor.h>
 
 const float TILT_THRESHOLD = 5.0;
-uint8_t carMac[] = {0x5C, 0xCF, 0x7F, 0xAA, 0x62, 0x12};
+uint8_t carMac[] = {enter the mac address of the esp32 or esp8266 board in the receiver};
 
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 
