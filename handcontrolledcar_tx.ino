@@ -1,12 +1,38 @@
+/*
+ * handcontrolledcar_tx.ino
+ * ESP32 Dev Module Hand Controller (Transmitter)
+ * Reads ADXL345 tilt, converts angle to speed, sends over ESP-NOW to car.
+ * 
+ * BOARD: ESP32 Dev Module
+ * PINS (right side): GPIO 14 = SDA, GPIO 12 = SCL, 3V3 = VCC+CS, GND = GND+SDO
+ * 
+ * Tilt angle to speed:
+ *   Below 20°   = STOP
+ *   20° to 60°  = speed ramps up from 60 to 255
+ *   Over 60°    = full speed 255
+ */
+
 #include <Wire.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <Adafruit_ADXL345_U.h>
 #include <Adafruit_Sensor.h>
+#include <math.h>
 
-const float TILT_THRESHOLD = 5.0;
+const float TILT_THRESHOLD = 5.0;    // degrees - start moving at this angle
+const float MIN_SPEED = 40;          // speed at 5° (slower start)
+const float MAX_SPEED = 150;         // speed at 60° or more
+const float GRAVITY = 9.81;          // m/s^2
+const float MAX_TILT_ANGLE = 60.0;   // degrees - full speed at this angle
+
 uint8_t carMac[] = {0xA0, 0xB7, 0x65, 0x5F, 0x15, 0xD0};
+
+struct Command {
+  char cmd;     // 'F', 'B', 'L', 'R', 'S'
+  uint8_t speed; // 0-255
+};
+Command txCmd;
 
 Adafruit_ADXL345_Unified accel = Adafruit_ADXL345_Unified(12345);
 
@@ -21,7 +47,6 @@ bool findSensor(uint8_t &addrOut) {
       for (uint8_t addr : {0x53, 0x1D}) {
         Wire.beginTransmission(addr);
         if (Wire.endTransmission() == 0) {
-          Serial.printf("Found 0x%02X  SDA=%d SCL=%d\n", addr, sda, scl);
           addrOut = addr;
           return true;
         }
@@ -34,26 +59,24 @@ bool findSensor(uint8_t &addrOut) {
 
 void setup() {
   Serial.begin(115200);
-  delay(2000);
-  Serial.println("Scanning for ADXL345...");
+  delay(500);
+  Serial.println("\n=== ESP32 Hand Controller TX ===");
 
+  Wire.begin();
   uint8_t addr = 0;
-  if (!(findSensor(addr) && accel.begin(addr))) {
-    while (1) {
-      Serial.println("ADXL345 not found");
-      delay(1000);
-    }
+  if (!findSensor(addr) || !accel.begin(addr)) {
+    Serial.println("ADXL345 not found! Check wiring.");
+    while (1) delay(1000);
   }
   accel.setRange(ADXL345_RANGE_16_G);
+  Serial.println("ADXL345 initialized");
 
   WiFi.mode(WIFI_STA);
   esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE);
 
   if (esp_now_init() != ESP_OK) {
-    while (1) {
-      Serial.println("ESP-NOW init failed");
-      delay(1000);
-    }
+    Serial.println("ESP-NOW init failed");
+    while (1) delay(1000);
   }
 
   esp_now_peer_info_t peer = {};
@@ -62,25 +85,54 @@ void setup() {
   peer.encrypt = false;
   esp_now_add_peer(&peer);
 
-  Serial.println("Ready");
+  Serial.println("TX Ready. Tilt to drive.");
 }
 
 void loop() {
   sensors_event_t event;
   accel.getEvent(&event);
+
   float x = event.acceleration.x;
   float y = event.acceleration.y;
 
   char cmd = 'S';
+  uint8_t speed = 0;
+
   if (abs(x) > abs(y)) {
-    if (x > TILT_THRESHOLD) cmd = 'R';
-    else if (x < -TILT_THRESHOLD) cmd = 'L';
+    // X-axis dominant: Left / Right
+    float g = abs(x) / GRAVITY;
+    if (g > 1.0) g = 1.0;
+    float angle = asin(g) * 180.0 / PI;
+
+    if (angle >= TILT_THRESHOLD) {
+      cmd = (x > 0) ? 'R' : 'L';
+      speed = (uint8_t)constrain(
+        MIN_SPEED + (angle - TILT_THRESHOLD) * (MAX_SPEED - MIN_SPEED) / (MAX_TILT_ANGLE - TILT_THRESHOLD),
+        MIN_SPEED, MAX_SPEED);
+    }
   } else {
-    if (y > TILT_THRESHOLD) cmd = 'F';
-    else if (y < -TILT_THRESHOLD) cmd = 'B';
+    // Y-axis dominant: Forward / Back
+    float g = abs(y) / GRAVITY;
+    if (g > 1.0) g = 1.0;
+    float angle = asin(g) * 180.0 / PI;
+
+    if (angle >= TILT_THRESHOLD) {
+      cmd = (y > 0) ? 'F' : 'B';
+      speed = (uint8_t)constrain(
+        MIN_SPEED + (angle - TILT_THRESHOLD) * (MAX_SPEED - MIN_SPEED) / (MAX_TILT_ANGLE - TILT_THRESHOLD),
+        MIN_SPEED, MAX_SPEED);
+    }
   }
 
-  esp_now_send(carMac, (uint8_t *)&cmd, 1);
-  Serial.printf("X=%.2f Y=%.2f | %c\n", x, y, cmd);
-  delay(80);
+  txCmd.cmd = cmd;
+  txCmd.speed = speed;
+
+  esp_now_send(carMac, (uint8_t *)&txCmd, sizeof(txCmd));
+
+  Serial.print("X="); Serial.print(x, 2);
+  Serial.print(" Y="); Serial.print(y, 2);
+  Serial.print(" Cmd="); Serial.print(cmd);
+  Serial.print(" Spd="); Serial.println(speed);
+
+  delay(50);
 }

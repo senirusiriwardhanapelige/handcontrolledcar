@@ -45,3 +45,9 @@ The battery pack feeds the L298N motor power and the 5V regulator input. The reg
 3. Open Serial Monitor on each board at 115200. Copy the receiver's MAC address into `carMac[]` in the transmitter code, then re-upload.
 4. Connect your phone to WiFi "CarCam" (password `12345678`) and open `http://192.168.4.1` for the camera stream.
 5. Tilt the transmitter to drive.
+
+## Speed control
+
+- Below 5° tilt: car stops
+- 5° to 60°: speed scales directly with tilt angle (slow at 5°, full speed at 60°)
+- Turns: both motors move forward, one slower than the other, so the car curves instead of spinning in place
