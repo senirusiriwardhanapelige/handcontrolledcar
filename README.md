@@ -5,7 +5,7 @@ A car driven by tilting your hand. An ADXL345 accelerometer on the transmitter r
 ## Parts
 
 **Transmitter (hand):**
-- Any ESP board
+- ESP32 Dev Module
 - ADXL345 accelerometer
 - Battery pack
 
