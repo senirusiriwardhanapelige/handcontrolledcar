@@ -1,0 +1,14 @@
+# Arduino / ESP8266
+*.bin
+*.hex
+*.elf
+*.o
+*.d
+build/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.a
+*.log
+serial_output.txt
